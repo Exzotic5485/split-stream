@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"image/jpeg"
 	"image/png"
 	"io"
 	"log"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/pixiv/go-libjpeg/jpeg"
 )
 
 type Game struct {
@@ -27,7 +27,7 @@ func (g *Game) Update() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		file, err := os.Create("screenshot.jpg")
+		file, err := os.Create("screenshot.png")
 
 		if err != nil {
 			return err
@@ -58,8 +58,6 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	// ebitenutil.DebugPrint(screen, "Hello, World!")
-
 	g.FrameMutex.Lock()
 	defer g.FrameMutex.Unlock()
 
@@ -75,7 +73,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	g := &Game{}
 
-	ebiten.SetWindowSize(957, 537)
+	ebiten.SetWindowSize(958, 538)
 	ebiten.SetWindowTitle("Split Stream")
 
 	go handleSocket(g)
@@ -115,7 +113,7 @@ func handleSocket(game *Game) {
 			log.Fatal(err)
 		}
 
-		img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
+		img, err := jpeg.Decode(bytes.NewReader(frame))
 
 		if err != nil {
 			log.Fatal(err)

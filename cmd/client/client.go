@@ -17,13 +17,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-type Game struct {
+type App struct {
 	Frame       *ebiten.Image
 	FrameMutex  sync.Mutex
 	SendCommand chan uint8
 }
 
-func (g *Game) Update() error {
+func (a *App) Update() error {
 	if inpututil.IsKeyJustReleased(ebiten.KeyF) {
 		ebiten.SetFullscreen(!ebiten.IsFullscreen())
 	}
@@ -37,7 +37,7 @@ func (g *Game) Update() error {
 
 		defer file.Close()
 
-		err = png.Encode(file, g.Frame)
+		err = png.Encode(file, a.Frame)
 
 		if err != nil {
 			return err
@@ -45,7 +45,7 @@ func (g *Game) Update() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		g.SendCommand <- command.ScreenOne
+		a.SendCommand <- command.ScreenOne
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
@@ -59,35 +59,35 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	g.FrameMutex.Lock()
-	defer g.FrameMutex.Unlock()
+func (a *App) Draw(screen *ebiten.Image) {
+	a.FrameMutex.Lock()
+	defer a.FrameMutex.Unlock()
 
-	if g.Frame != nil {
-		screen.DrawImage(g.Frame, nil)
+	if a.Frame != nil {
+		screen.DrawImage(a.Frame, nil)
 	}
 }
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (a *App) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 958, 538
 }
 
 func main() {
-	g := &Game{
+	a := &App{
 		SendCommand: make(chan uint8),
 	}
 
 	ebiten.SetWindowSize(958, 538)
 	ebiten.SetWindowTitle("Split Stream")
 
-	go handleSocket(g)
+	go handleSocket(a)
 
-	if err := ebiten.RunGame(g); err != nil {
+	if err := ebiten.RunGame(a); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func handleSocket(game *Game) {
+func handleSocket(app *App) {
 	addr, err := net.ResolveTCPAddr("tcp", osArgOrDefault(1, "192.168.55.114:3000"))
 
 	if err != nil {
@@ -102,7 +102,7 @@ func handleSocket(game *Game) {
 
 	defer conn.Close()
 
-	go handleOutgoing(conn, game)
+	go handleOutgoing(conn, app)
 
 	for {
 		var length uint32
@@ -125,15 +125,15 @@ func handleSocket(game *Game) {
 			log.Fatal(err)
 		}
 
-		game.FrameMutex.Lock()
-		game.Frame = ebiten.NewImageFromImage(img)
-		game.FrameMutex.Unlock()
+		app.FrameMutex.Lock()
+		app.Frame = ebiten.NewImageFromImage(img)
+		app.FrameMutex.Unlock()
 	}
 }
 
-func handleOutgoing(conn net.Conn, game *Game) {
+func handleOutgoing(conn net.Conn, app *App) {
 	for {
-		cmd := <-game.SendCommand
+		cmd := <-app.SendCommand
 
 		if err := binary.Write(conn, binary.BigEndian, cmd); err != nil {
 			log.Printf("failed to send command %d: %v\n", cmd, err)

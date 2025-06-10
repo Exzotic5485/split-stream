@@ -38,10 +38,12 @@ func main() {
 	ss := splitstream.NewSplitStream("/dev/video0", splits)
 
 	go ss.Run()
-	go createSplitServer(":3000", splits[0].Output)
-	go createSplitServer(":3001", splits[1].Output)
-	go createSplitServer(":3002", splits[2].Output)
-	// go createSplitServer(":3003", splits[3].Output)
+
+	// each split has a seperate tcp server for stream,
+	// will be one server in the future with commands to change stream
+	for i, split := range splits {
+		go createSplitServer(fmt.Sprintf(":%d", 3000+i), split.Output)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

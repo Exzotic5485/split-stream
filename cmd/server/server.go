@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -9,8 +8,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os/signal"
-	"syscall"
 
 	"github.com/exzotic5485/split-stream/splitstream"
 )
@@ -37,18 +34,18 @@ func main() {
 
 	ss := splitstream.NewSplitStream("/dev/video0", splits)
 
-	go ss.Run()
+	frames := make(chan []byte)
+
+	go ss.Run(frames)
 
 	// each split has a seperate tcp server for stream,
 	// will be one server in the future with commands to change stream
-	for i, split := range splits {
-		go createSplitServer(fmt.Sprintf(":%d", 3000+i), split.Output)
-	}
+	createSplitServer(":3000", frames)
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	// ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	// defer stop()
 
-	<-ctx.Done()
+	// <-ctx.Done()
 }
 
 func createSplitServer(address string, frames chan []byte) {

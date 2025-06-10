@@ -3,24 +3,28 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"image/jpeg"
+	"image"
 	"image/png"
 	"io"
 	"log"
 	"net"
 	"os"
 	"sync"
-	"time"
 
-	"github.com/exzotic5485/split-stream/command"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/pixiv/go-libjpeg/jpeg"
 )
+
+type SubImage interface {
+	SubImage(r image.Rectangle) image.Image
+}
 
 type App struct {
 	Frame       *ebiten.Image
 	FrameMutex  sync.Mutex
 	SendCommand chan uint8
+	Focus       image.Rectangle
 }
 
 func (a *App) Update() error {
@@ -45,15 +49,23 @@ func (a *App) Update() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		a.SendCommand <- command.ScreenOne
+		a.Focus = image.Rect(0, 0, 1920, 1080)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
-		time.Sleep(time.Second * 2)
+		a.Focus = image.Rect(0, 0, 958, 538)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
-		time.Sleep(time.Second * 3)
+		a.Focus = image.Rect(960, 0, 1920, 538)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key4) {
+		a.Focus = image.Rect(0, 545, 958, 1080)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key5) {
+		a.Focus = image.Rect(960, 545, 1920, 1080)
 	}
 
 	return nil
@@ -69,12 +81,13 @@ func (a *App) Draw(screen *ebiten.Image) {
 }
 
 func (a *App) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 958, 538
+	return a.Focus.Dx(), a.Focus.Dy()
 }
 
 func main() {
 	a := &App{
 		SendCommand: make(chan uint8),
+		Focus:       image.Rect(0, 0, 1920, 1080),
 	}
 
 	ebiten.SetWindowSize(958, 538)
@@ -119,14 +132,14 @@ func handleSocket(app *App) {
 			log.Fatal(err)
 		}
 
-		img, err := jpeg.Decode(bytes.NewReader(frame))
+		img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		app.FrameMutex.Lock()
-		app.Frame = ebiten.NewImageFromImage(img)
+		app.Frame = ebiten.NewImageFromImage(img.(SubImage).SubImage(app.Focus))
 		app.FrameMutex.Unlock()
 	}
 }

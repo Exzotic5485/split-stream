@@ -1,12 +1,10 @@
 package splitstream
 
 import (
-	"bytes"
 	"context"
 	"image"
 	"log"
 
-	"github.com/pixiv/go-libjpeg/jpeg"
 	"github.com/vladimirvivien/go4vl/device"
 	"github.com/vladimirvivien/go4vl/v4l2"
 )
@@ -32,7 +30,7 @@ func NewSplitStream(device string, splits []Split) *SplitStream {
 	}
 }
 
-func (ss *SplitStream) Run() {
+func (ss *SplitStream) Run(output chan []byte) {
 	dev, err := device.Open(ss.Device, device.WithPixFormat(v4l2.PixFormat{
 		PixelFormat: v4l2.PixelFmtMJPEG,
 		Width:       1920,
@@ -59,27 +57,29 @@ func (ss *SplitStream) Run() {
 			continue
 		}
 
-		reader := bytes.NewReader(frame)
+		output <- frame
 
-		img, err := jpeg.Decode(reader, &jpeg.DecoderOptions{})
+		// reader := bytes.NewReader(frame)
 
-		if err != nil {
-			log.Fatalf("failed to decode frame %v", err)
-		}
+		// img, err := jpeg.Decode(reader, &jpeg.DecoderOptions{})
 
-		for _, split := range ss.Splits {
-			var buf bytes.Buffer
+		// if err != nil {
+		// 	log.Fatalf("failed to decode frame %v", err)
+		// }
 
-			subImg := img.(SubImage).SubImage(split.Rect)
+		// for _, split := range ss.Splits {
+		// 	var buf bytes.Buffer
 
-			if err := jpeg.Encode(&buf, subImg, &jpeg.EncoderOptions{
-				Quality: 100,
-			}); err != nil {
-				log.Fatal(err)
-			}
+		// 	subImg := img.(SubImage).SubImage(split.Rect)
 
-			split.Output <- buf.Bytes()
-		}
+		// 	if err := jpeg.Encode(&buf, subImg, &jpeg.EncoderOptions{
+		// 		Quality: 100,
+		// 	}); err != nil {
+		// 		log.Fatal(err)
+		// 	}
+
+		// 	split.Output <- buf.Bytes()
+		// }
 
 		// fmt.Printf("Took %s to split frames\n", time.Since(t1))
 

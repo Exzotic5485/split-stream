@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"image"
+	"io"
 	"log"
 	"net"
 	"os/signal"
@@ -48,6 +50,10 @@ func main() {
 }
 
 func createSplitServer(address string, frames chan []byte) {
+	cm := NewClientManager()
+
+	go cm.Run(frames)
+
 	l, err := net.Listen("tcp", address)
 
 	if err != nil {
@@ -55,28 +61,6 @@ func createSplitServer(address string, frames chan []byte) {
 	}
 
 	defer l.Close()
-
-	var clients map[net.Conn]bool = map[net.Conn]bool{}
-
-	go func() {
-		for {
-			frame := <-frames
-
-			for c := range clients {
-				if err := binary.Write(c, binary.BigEndian, uint32(len(frame))); err != nil {
-					c.Close()
-					delete(clients, c)
-				}
-
-				_, err := c.Write(frame)
-
-				if err != nil {
-					c.Close()
-					delete(clients, c)
-				}
-			}
-		}
-	}()
 
 	for {
 		c, err := l.Accept()
@@ -86,6 +70,29 @@ func createSplitServer(address string, frames chan []byte) {
 			return
 		}
 
-		clients[c] = true
+		go handleConnection(c, cm)
+	}
+}
+
+func handleConnection(c net.Conn, cm *ClientManager) {
+	cm.Register <- c
+
+	defer func() {
+		cm.UnRegister <- c
+	}()
+
+	for {
+		var cmd uint8
+
+		if err := binary.Read(c, binary.BigEndian, &cmd); err != nil {
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+				break
+			}
+
+			log.Printf("error reading command from %s: %v\n", c.RemoteAddr(), err)
+			continue
+		}
+
+		log.Printf("received command %d from %s", cmd, c.RemoteAddr())
 	}
 }

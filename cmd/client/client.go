@@ -12,13 +12,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/exzotic5485/split-stream/command"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Game struct {
-	Frame      *ebiten.Image
-	FrameMutex sync.Mutex
+	Frame       *ebiten.Image
+	FrameMutex  sync.Mutex
+	SendCommand chan uint8
 }
 
 func (g *Game) Update() error {
@@ -43,7 +45,7 @@ func (g *Game) Update() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
-		time.Sleep(time.Second)
+		g.SendCommand <- command.ScreenOne
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.Key2) {
@@ -67,11 +69,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return g.Frame.Bounds().Dx(), g.Frame.Bounds().Dy()
+	return 958, 538
 }
 
 func main() {
-	g := &Game{}
+	g := &Game{
+		SendCommand: make(chan uint8),
+	}
 
 	ebiten.SetWindowSize(958, 538)
 	ebiten.SetWindowTitle("Split Stream")
@@ -98,6 +102,8 @@ func handleSocket(game *Game) {
 
 	defer conn.Close()
 
+	go handleOutgoing(conn, game)
+
 	for {
 		var length uint32
 
@@ -122,6 +128,16 @@ func handleSocket(game *Game) {
 		game.FrameMutex.Lock()
 		game.Frame = ebiten.NewImageFromImage(img)
 		game.FrameMutex.Unlock()
+	}
+}
+
+func handleOutgoing(conn net.Conn, game *Game) {
+	for {
+		cmd := <-game.SendCommand
+
+		if err := binary.Write(conn, binary.BigEndian, cmd); err != nil {
+			log.Printf("failed to send command %d: %v\n", cmd, err)
+		}
 	}
 }
 

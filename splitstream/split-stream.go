@@ -3,10 +3,8 @@ package splitstream
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"image"
 	"log"
-	"time"
 
 	"github.com/pixiv/go-libjpeg/jpeg"
 	"github.com/vladimirvivien/go4vl/device"
@@ -57,9 +55,9 @@ func (ss *SplitStream) Run() {
 		log.Fatal("invalid pixel format, requires MJPEG")
 	}
 
-	// capture frame
 	for {
-		t1 := time.Now()
+		// t1 := time.Now()
+
 		frame := <-dev.GetOutput()
 
 		reader := bytes.NewReader(frame)
@@ -84,6 +82,7 @@ func (ss *SplitStream) Run() {
 			split.Output <- buf.Bytes()
 		}
 
-		fmt.Printf("Took %s to split frames\n", time.Since(t1))
+		// fmt.Printf("Took %s to split frames\n", time.Since(t1))
+
 	}
 }

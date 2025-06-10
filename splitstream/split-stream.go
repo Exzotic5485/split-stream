@@ -33,26 +33,20 @@ func NewSplitStream(device string, splits []Split) *SplitStream {
 }
 
 func (ss *SplitStream) Run() {
-	dev, err := device.Open(ss.Device, device.WithBufferSize(1))
+	dev, err := device.Open(ss.Device, device.WithPixFormat(v4l2.PixFormat{
+		PixelFormat: v4l2.PixelFmtMJPEG,
+		Width:       1920,
+		Height:      1080,
+	}))
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to initialize device %v", err)
 	}
 
 	defer dev.Close()
 
 	if err := dev.Start(context.TODO()); err != nil {
-		log.Fatal(err)
-	}
-
-	format, err := dev.GetPixFormat()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if format.PixelFormat != v4l2.PixelFmtMJPEG {
-		log.Fatal("invalid pixel format, requires MJPEG")
+		log.Fatalf("failed to start device streaming %v", err)
 	}
 
 	for {
@@ -60,12 +54,17 @@ func (ss *SplitStream) Run() {
 
 		frame := <-dev.GetOutput()
 
+		if len(frame) == 0 {
+			log.Println("empty frame length")
+			continue
+		}
+
 		reader := bytes.NewReader(frame)
 
 		img, err := jpeg.Decode(reader, &jpeg.DecoderOptions{})
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to decode frame %v", err)
 		}
 
 		for _, split := range ss.Splits {

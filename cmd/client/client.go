@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"image"
 	"image/png"
 	"io"
@@ -145,6 +146,14 @@ func handleSocket(app *App) {
 		var length uint32
 
 		if err := binary.Read(conn, binary.BigEndian, &length); err != nil {
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				log.Println("reconnecting.")
+
+				go handleSocket(app)
+
+				return
+			}
+
 			log.Fatal(err)
 		}
 
@@ -153,6 +162,14 @@ func handleSocket(app *App) {
 		_, err := io.ReadFull(conn, frame)
 
 		if err != nil {
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				log.Println("reconnecting.")
+
+				go handleSocket(app)
+
+				return
+			}
+
 			log.Fatal(err)
 		}
 
@@ -162,11 +179,6 @@ func handleSocket(app *App) {
 }
 
 func processFrame(frame []byte, app *App) {
-	if !bytes.Equal(frame[:2], []byte{255, 216}) || !bytes.Equal(frame[len(frame)-2:], []byte{255, 217}) {
-		log.Println("skipping. frame doesnt look like JPEG")
-		return
-	}
-
 	img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
 
 	if err != nil {

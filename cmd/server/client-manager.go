@@ -2,10 +2,8 @@ package main
 
 import (
 	"encoding/binary"
-	"errors"
 	"log"
 	"net"
-	"os"
 	"time"
 )
 
@@ -29,19 +27,21 @@ func (cm *ClientManager) Run(frames chan []byte) {
 	for {
 		select {
 		case client := <-cm.Register:
+			log.Printf("%s registered\n", client.RemoteAddr().String())
 			cm.Clients[client] = true
 		case client := <-cm.UnRegister:
+			log.Printf("%s unregistered\n", client.RemoteAddr().String())
 			delete(cm.Clients, client)
 		case data := <-frames:
 			t1 := time.Now()
 			for client := range cm.Clients {
-				client.SetWriteDeadline(time.Now().Add(time.Millisecond * 10))
+				client.SetWriteDeadline(time.Now().Add(time.Millisecond * 5))
 
 				if err := binary.Write(client, binary.BigEndian, uint32(len(data))); err != nil {
-					if errors.Is(err, os.ErrDeadlineExceeded) {
-						log.Printf("%s took too long to write frame length\n", client.RemoteAddr().String())
-						continue
-					}
+					// if errors.Is(err, os.ErrDeadlineExceeded) {
+					// 	log.Printf("%s took too long to write frame length\n", client.RemoteAddr().String())
+					// 	continue
+					// }
 
 					client.Close()
 					delete(cm.Clients, client)
@@ -50,10 +50,10 @@ func (cm *ClientManager) Run(frames chan []byte) {
 				_, err := client.Write(data)
 
 				if err != nil {
-					if errors.Is(err, os.ErrDeadlineExceeded) {
-						log.Printf("%s took too long to write frame data\n", client.RemoteAddr().String())
-						continue
-					}
+					// if errors.Is(err, os.ErrDeadlineExceeded) {
+					// 	log.Printf("%s took too long to write frame data\n", client.RemoteAddr().String())
+					// 	continue
+					// }
 
 					client.Close()
 					delete(cm.Clients, client)

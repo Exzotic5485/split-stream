@@ -156,8 +156,7 @@ func handleSocket(app *App) {
 			log.Fatal(err)
 		}
 
-		go processFrame(frame, app)
-
+		processFrame(frame, app)
 		// count++
 	}
 }
@@ -166,7 +165,8 @@ func processFrame(frame []byte, app *App) {
 	img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
 
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("failed decoding jpeg %v\n", err)
+		return
 	}
 
 	app.FrameMutex.Lock()

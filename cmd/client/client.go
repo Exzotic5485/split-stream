@@ -162,7 +162,7 @@ func handleSocket(app *App) {
 }
 
 func processFrame(frame []byte, app *App) {
-	if !bytes.Equal(frame[:2], []byte{255, 216}) || bytes.Equal(frame[len(frame)-2:], []byte{255, 217}) {
+	if !bytes.Equal(frame[:2], []byte{255, 216}) || !bytes.Equal(frame[len(frame)-2:], []byte{255, 217}) {
 		log.Println("skipping. frame doesnt look like JPEG")
 		return
 	}

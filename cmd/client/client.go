@@ -100,6 +100,20 @@ func main() {
 	}
 }
 
+// func logFps(count *int) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+// 	defer cancel()
+
+// 	<-ctx.Done()
+
+// 	log.Printf("fps %d\n", *count)
+
+// 	*count = 0
+
+// 	go logFps(count)
+// }
+
 func handleSocket(app *App) {
 	addr, err := net.ResolveTCPAddr("tcp", osArgOrDefault(1, "192.168.55.114:3000"))
 
@@ -115,9 +129,9 @@ func handleSocket(app *App) {
 
 	defer conn.Close()
 
-	go handleOutgoing(conn, app)
+	// count := 0
 
-	opts := &jpeg.DecoderOptions{}
+	// go logFps(&count)
 
 	for {
 		var length uint32
@@ -134,26 +148,22 @@ func handleSocket(app *App) {
 			log.Fatal(err)
 		}
 
-		img, err := jpeg.Decode(bytes.NewReader(frame), opts)
+		go processFrame(frame, app)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		app.FrameMutex.Lock()
-		app.Frame = ebiten.NewImageFromImage(img.(SubImage).SubImage(app.Focus))
-		app.FrameMutex.Unlock()
+		// count++
 	}
 }
 
-func handleOutgoing(conn net.Conn, app *App) {
-	for {
-		cmd := <-app.SendCommand
+func processFrame(frame []byte, app *App) {
+	img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
 
-		if err := binary.Write(conn, binary.BigEndian, cmd); err != nil {
-			log.Printf("failed to send command %d: %v\n", cmd, err)
-		}
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	app.FrameMutex.Lock()
+	app.Frame = ebiten.NewImageFromImage(img.(SubImage).SubImage(app.Focus))
+	app.FrameMutex.Unlock()
 }
 
 func osArgOrDefault(idx int, defaultValue string) string {

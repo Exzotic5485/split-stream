@@ -117,6 +117,8 @@ func handleSocket(app *App) {
 
 	go handleOutgoing(conn, app)
 
+	opts := &jpeg.DecoderOptions{}
+
 	for {
 		var length uint32
 
@@ -132,7 +134,7 @@ func handleSocket(app *App) {
 			log.Fatal(err)
 		}
 
-		img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
+		img, err := jpeg.Decode(bytes.NewReader(frame), opts)
 
 		if err != nil {
 			log.Fatal(err)

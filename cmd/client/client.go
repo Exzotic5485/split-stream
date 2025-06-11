@@ -162,10 +162,15 @@ func handleSocket(app *App) {
 }
 
 func processFrame(frame []byte, app *App) {
+	if !bytes.Equal(frame[:2], []byte{255, 216}) || bytes.Equal(frame[len(frame)-2:], []byte{255, 217}) {
+		log.Println("skipping. frame doesnt look like JPEG")
+		return
+	}
+
 	img, err := jpeg.Decode(bytes.NewReader(frame), &jpeg.DecoderOptions{})
 
 	if err != nil {
-		log.Printf("failed decoding jpeg %v\n", err)
+		log.Printf("skipping. failed to decode jpeg %v\n", err)
 		return
 	}
 

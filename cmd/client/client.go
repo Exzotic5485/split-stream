@@ -48,24 +48,32 @@ func (a *App) Update() error {
 		}
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.Key1) {
+	if inpututil.IsKeyJustPressed(ebiten.Key0) {
 		a.Focus = image.Rect(0, 0, 1920, 1080)
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.Key2) {
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		a.Focus = image.Rect(0, 0, 958, 538)
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.Key3) {
+	if inpututil.IsKeyJustPressed(ebiten.Key2) {
 		a.Focus = image.Rect(960, 0, 1920, 538)
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.Key4) {
+	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		a.Focus = image.Rect(0, 545, 958, 1080)
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.Key5) {
+	if inpututil.IsKeyJustPressed(ebiten.Key4) {
 		a.Focus = image.Rect(960, 545, 1920, 1080)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key5) {
+		a.Focus = image.Rect(0, 0, 958, 1080)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.Key6) {
+		a.Focus = image.Rect(958, 0, 1920, 1080)
 	}
 
 	return nil
